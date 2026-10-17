@@ -9,7 +9,6 @@ import { Announcements } from "./announcements"
 import { Expeditions } from "./expeditions"
 import { Pokepals } from "./pokepals"
 import { TournamentsList } from "./tournaments-list"
-import { TwitchStreams } from "./twitch-streams"
 import { VictoryRoad } from "./victory-road"
 
 export function EventsMenu() {
@@ -17,40 +16,11 @@ export function EventsMenu() {
   const tournaments: TournamentSchema[] = useAppSelector(
     (state) => state.lobby.tournaments
   )
-  const [showTwitchTab, setShowTwitchTab] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const currentGameEvent = getCurrentGameEvent()
 
   const hasTournamentTab = tournaments.length > 0
-  const tabCount = 2 + (hasTournamentTab ? 1 : 0) + (showTwitchTab ? 1 : 0)
-
-  useEffect(() => {
-    let isMounted = true
-
-    async function fetchTwitchStreams() {
-      try {
-        const response = await fetch(
-          `/twitch/streams?t=${Math.floor(Date.now() / 300000)}`
-        )
-        const data = (await response.json()) as { streams: unknown[] }
-        if (isMounted) {
-          setShowTwitchTab((data.streams?.length ?? 0) > 0)
-        }
-      } catch {
-        if (isMounted) {
-          setShowTwitchTab(false)
-        }
-      }
-    }
-
-    fetchTwitchStreams()
-    const interval = setInterval(fetchTwitchStreams, 1000 * 60 * 2)
-
-    return () => {
-      isMounted = false
-      clearInterval(interval)
-    }
-  }, [])
+  const tabCount = 2 + (hasTournamentTab ? 1 : 0)
 
   useEffect(() => {
     if (selectedIndex >= tabCount) {
@@ -66,11 +36,6 @@ export function EventsMenu() {
     >
       <h2>{t("events")}</h2>
       <TabList>
-        {showTwitchTab && (
-          <Tab>
-            <span>{t("twitch_streams.title")}</span>
-          </Tab>
-        )}
         <Tab>
           <span>{t("announcements")}</span>
         </Tab>
@@ -95,11 +60,6 @@ export function EventsMenu() {
           </Tab>
         )}
       </TabList>
-      {showTwitchTab && (
-        <TabPanel>
-          <TwitchStreams />
-        </TabPanel>
-      )}
       <TabPanel>
         <Announcements />
       </TabPanel>

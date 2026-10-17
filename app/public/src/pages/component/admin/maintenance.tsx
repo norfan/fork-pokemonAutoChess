@@ -29,30 +29,6 @@ export default function Maintenance() {
         >
           {t("admin_panel.refresh_meta_reports")}
         </button>
-        <button
-          className="bubbly blue"
-          onClick={() =>
-            sendMaintenanceOrder(MaintenanceOrder.REFRESH_SPRITE_GAP_DATA)
-          }
-        >
-          {t("admin_panel.refresh_sprite_gap_data")}
-        </button>
-        <button
-          className="bubbly blue"
-          onClick={() =>
-            sendMaintenanceOrder(MaintenanceOrder.REFRESH_TWITCH_STREAMS)
-          }
-        >
-          {t("admin_panel.refresh_twitch_streams")}
-        </button>
-        <button
-          className="bubbly blue"
-          onClick={() =>
-            sendMaintenanceOrder(MaintenanceOrder.REFRESH_TWITCH_BLACKLIST)
-          }
-        >
-          {t("admin_panel.refresh_twitch_blacklist")}
-        </button>
       </div>
     </div>
   )

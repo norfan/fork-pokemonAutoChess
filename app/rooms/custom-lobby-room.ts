@@ -7,7 +7,7 @@ import {
   subscribeLobby
 } from "colyseus"
 import { CronJob } from "cron"
-import admin from "firebase-admin"
+import { type LocalUserRecord, verifyLocalToken } from "../auth/local-auth"
 import {
   INACTIVITY_TIMEOUT,
   MAX_CONCURRENT_PLAYERS_ON_LOBBY,
@@ -411,12 +411,6 @@ export default class CustomLobbyRoom extends Room {
           notify("Leaderboards refreshed")
         } else if (order === MaintenanceOrder.FETCH_META_REPORTS) {
           notify("Meta reports refreshed")
-        } else if (order === MaintenanceOrder.REFRESH_SPRITE_GAP_DATA) {
-          notify("Sprite gap data refreshed")
-        } else if (order === MaintenanceOrder.REFRESH_TWITCH_STREAMS) {
-          notify("Twitch streams refreshed")
-        } else if (order === MaintenanceOrder.REFRESH_TWITCH_BLACKLIST) {
-          notify("Twitch streams blacklist refreshed")
         }
       }
     )
@@ -430,11 +424,13 @@ export default class CustomLobbyRoom extends Room {
     client: Client,
     options,
     context
-  ): Promise<admin.auth.UserRecord> {
+  ): Promise<LocalUserRecord> {
     try {
       super.onAuth(client, options, context)
-      const token = await admin.auth().verifyIdToken(options.idToken)
-      const user = await admin.auth().getUser(token.uid)
+      const user = verifyLocalToken(options.idToken, {
+        uid: options.uid,
+        displayName: options.displayName
+      })
 
       if (!user.displayName) {
         logger.error("No display name for this account", user.uid)

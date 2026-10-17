@@ -1,8 +1,5 @@
 import { matchMaker } from "colyseus"
 import { CronJob } from "cron"
-import dayjs from "dayjs"
-import admin from "firebase-admin"
-import type { UserRecord } from "firebase-admin/auth"
 import {
   CRON_ELO_DECAY_DELAY,
   CRON_ELO_DECAY_MINIMUM_ELO,
@@ -25,23 +22,6 @@ import { min } from "../utils/number"
 import { logPreviousDayBoosterCreationStats } from "./booster-monitor"
 import { fetchMetaReports } from "./meta"
 import { notificationsService } from "./notifications"
-import { refreshSpriteGapData } from "./sprite-gap-scanner"
-
-function getDeterministicSpriteGapSchedule(seed: string): {
-  hour: number
-  minute: number
-} {
-  let hash = 0
-
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
-  }
-
-  return {
-    hour: hash % 24,
-    minute: Math.floor(hash / 24) % 60
-  }
-}
 
 export function initCronJobs(isMainThread: boolean) {
   logger.debug("init cron jobs")
@@ -95,30 +75,6 @@ export function initCronJobs(isMainThread: boolean) {
       },
       start: true
     })
-
-    // SpriteCollab endpoint refresh should be triggered once globally.
-    // We use deterministic jitter per server so community servers do not refresh at the same UTC time.
-    const spriteGapSeed =
-      process.env.SPRITE_GAP_REFRESH_SEED ??
-      process.env.SERVER_NAME ??
-      process.env.HOSTNAME ??
-      "default"
-    const spriteGapSchedule = getDeterministicSpriteGapSchedule(spriteGapSeed)
-
-    logger.info(
-      `[CRON] Sprite gap weekly refresh scheduled at ${spriteGapSchedule.hour
-        .toString()
-        .padStart(2, "0")}:${spriteGapSchedule.minute
-        .toString()
-        .padStart(2, "0")} UTC on Monday (seed=${spriteGapSeed})`
-    )
-
-    CronJob.from({
-      cronTime: `${spriteGapSchedule.minute} ${spriteGapSchedule.hour} * * 1`, // every Monday at jittered UTC time
-      timeZone: "UTC",
-      onTick: () => refreshSpriteGapData(),
-      start: true
-    })
   }
 
   // see https://github.com/keldaanCommunity/pokemonAutoChessMetaReport/blob/main/.github/workflows/main.yml
@@ -134,50 +90,9 @@ export function initCronJobs(isMainThread: boolean) {
 }
 
 async function deleteOldAnonymousAccounts() {
-  logger.info("[CRON] Deleting old anonymous accounts...")
-  const currentDate = dayjs() // Get the current date and time
-  const oneMonthLimit = currentDate.subtract(1, "month")
-  const anonymousAccounts = new Array<UserRecord>()
-  await listAllUsers()
-
-  async function listAllUsers(nextPageToken?: string) {
-    // List batch of users, 1000 at a time.
-    const listUsersResult = await admin.auth().listUsers(1000, nextPageToken)
-    //logger.debug(nextPageToken)
-    listUsersResult.users.forEach((userRecord) => {
-      const lastSignInDate = dayjs(userRecord.metadata.lastSignInTime)
-      if (
-        userRecord.email === undefined &&
-        userRecord.photoURL === undefined &&
-        userRecord.metadata.lastSignInTime &&
-        lastSignInDate.isBefore(oneMonthLimit)
-      ) {
-        anonymousAccounts.push(userRecord)
-      }
-    })
-    if (listUsersResult.pageToken) {
-      // List next batch of users.
-      await listAllUsers(listUsersResult.pageToken)
-    }
-  }
-
-  logger.info(
-    `deleting ${anonymousAccounts.length} inactive anonymous accounts`
-  )
-
-  while (anonymousAccounts.length > 0) {
-    const batchDeletion = new Array<string>()
-    for (let i = 0; i < 999; i++) {
-      const account = anonymousAccounts.pop()
-      account && batchDeletion.push(account.uid)
-    }
-    const firebaseDeletion = await admin.auth().deleteUsers(batchDeletion)
-    logger.info("firebase deletion result ", firebaseDeletion)
-    const pacDeletion = await UserMetadata.deleteMany({
-      uid: { $in: batchDeletion }
-    })
-    logger.info("pac deletion result ", pacDeletion)
-  }
+  // Offline build: accounts are local (no Firebase), so there is no third-party
+  // identity provider to prune. Kept as a no-op for API compatibility.
+  logger.info("[CRON] Skipping anonymous account cleanup (local mode)")
 }
 
 async function eloDecay() {

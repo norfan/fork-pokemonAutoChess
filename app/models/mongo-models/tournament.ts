@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose"
+import { model, Schema } from "../../db/mongoose-shim"
 import type { ITournament } from "../../types/interfaces/Tournament"
 
 const tournamentPlayerSchema = new Schema({

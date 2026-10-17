@@ -1,1 +1,0 @@
-run remove-silvally-flora to remove Silvally-Flora from bots, statistics, game histories and meta report

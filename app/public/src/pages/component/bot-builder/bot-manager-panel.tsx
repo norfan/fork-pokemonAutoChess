@@ -1,5 +1,5 @@
-import firebase from "firebase/compat/app"
 import { useEffect, useMemo, useState } from "react"
+import { getToken } from "../../../local-auth"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
 import { AutoSizer } from "react-virtualized-auto-sizer"
@@ -104,7 +104,12 @@ function BotsList(props: {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
   useEffect(() => {
-    authenticateUser()
+    // The bot list itself is public, but the identity is still needed for the
+    // rest of the page. Swallow the "not authenticated yet" rejection so it
+    // does not bubble up as an uncaught promise error.
+    authenticateUser().catch(() => {
+      navigate("/")
+    })
     fetch(
       `/bots?${props.filteredPokemon ? `pkm=${props.filteredPokemon}` : ""}&t=${Date.now()}`
     )
@@ -122,7 +127,7 @@ function BotsList(props: {
       )
     )
       return
-    const token = await firebase.auth().currentUser?.getIdToken()
+    const token = await getToken()
     const res = await fetch(`/bots/${bot.id}`, {
       method: "DELETE",
       headers: {
@@ -135,7 +140,7 @@ function BotsList(props: {
   }
 
   async function approveBot(botId: string, approved: boolean) {
-    const token = await firebase.auth().currentUser?.getIdToken()
+    const token = await getToken()
     const res = await fetch(`/bots/${botId}/approve`, {
       method: "POST",
       headers: {

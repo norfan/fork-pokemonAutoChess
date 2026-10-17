@@ -10,12 +10,10 @@ import BotBuilder from "./pages/component/bot-builder/bot-builder"
 import { BotManagerPanel } from "./pages/component/bot-builder/bot-manager-panel"
 import MapViewer from "./pages/component/debug/map-viewer"
 import Game from "./pages/game"
-import { Gameboy } from "./pages/gameboy"
 import Lobby from "./pages/lobby"
 import Preparation from "./pages/preparation"
 import Replay from "./pages/replay"
 import { SpriteDebug } from "./pages/sprite-viewer"
-import TranslationsPage from "./pages/translations"
 import store from "./stores/index"
 import "./style/index.css"
 import "./custom-cursors"
@@ -55,8 +53,6 @@ i18n.on("initialized", () => {
               <Route path="/bot-admin" element={<BotManagerPanel />} />
               <Route path="/sprite-viewer" element={<SpriteDebug />} />
               <Route path="/map-viewer" element={<MapViewer />} />
-              <Route path="/gameboy" element={<Gameboy />} />
-              <Route path="/translations" element={<TranslationsPage />} />
             </Routes>
           </BrowserRouter>
         </Suspense>

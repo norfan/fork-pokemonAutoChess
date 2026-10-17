@@ -1,5 +1,5 @@
 import { getStateCallbacks, type Room } from "@colyseus/sdk"
-import firebase from "firebase/compat/app"
+import { getToken } from "../local-auth"
 import { useCallback, useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
@@ -274,7 +274,7 @@ export default function Preparation() {
       })
 
       room.onMessage(Transfer.GAME_START, async (roomId) => {
-        const token = await firebase.auth().currentUser?.getIdToken()
+        const token = await getToken()
         if (token && !connectingToGame.current) {
           playSound(SOUNDS.START_GAME)
           connectingToGame.current = true

@@ -1,5 +1,5 @@
-import firebase from "firebase/compat/app"
 import { useRef, useState } from "react"
+import { getToken } from "../../../local-auth"
 import { useTranslation } from "react-i18next"
 import type { ISuggestionUser } from "../../../../../types"
 import { debounce } from "../../../../../utils/function"
@@ -24,7 +24,7 @@ export function PlayerSearchBar(props: {
     setLoading(true)
     setError("")
     try {
-      const token = await firebase.auth().currentUser?.getIdToken()
+      const token = await getToken()
       const res = await fetch(`/players?name=${encodeURIComponent(query)}`, {
         method: "GET",
         headers: {

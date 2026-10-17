@@ -1,4 +1,4 @@
-import type { HydratedDocument } from "mongoose"
+import type { HydratedDocument } from "../db/mongoose-shim"
 import {
   BoosterRarityProbability,
   EmotionCost,

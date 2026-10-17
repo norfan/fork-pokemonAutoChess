@@ -1,28 +1,36 @@
-import firebase from "firebase/compat/app"
-import "firebase/compat/auth"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
-import { FIREBASE_CONFIG } from "../../../../../config"
 import { throttle } from "../../../../../utils/function"
 import { joinLobbyRoom } from "../../../game/lobby-logic"
 import { useAppDispatch, useAppSelector } from "../../../hooks"
+import { getLocalUser, signInLocal, signOutLocal } from "../../../local-auth"
 import { logIn, logOut } from "../../../stores/NetworkStore"
-//import AnonymousButton from "./anonymous-button"
-import { StyledFirebaseAuth } from "./styled-firebase-auth"
-
-import "firebaseui/dist/firebaseui.css"
 import "./login.css"
 
+/**
+ * Offline login: no Firebase, no password, no network.
+ * The player just picks a nickname, which is persisted locally and used as
+ * identity for the local server.
+ */
 export default function Login() {
   const { t } = useTranslation()
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const uid = useAppSelector((state) => state.network.uid)
   const displayName = useAppSelector((state) => state.network.displayName)
-  const email = useAppSelector((state) => state.network.email)
+  const [nickname, setNickname] = useState("")
   const [prejoining, setPrejoining] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
+
+  // pick up an existing local identity on first render
+  useEffect(() => {
+    const stored = getLocalUser()
+    if (stored && !uid) {
+      dispatch(logIn(stored))
+      setNickname(stored.displayName)
+    }
+  }, [dispatch, uid])
 
   const preJoinLobby = throttle(async function prejoin() {
     setPrejoining(true)
@@ -31,86 +39,71 @@ export default function Login() {
       .catch(() => setPrejoining(false))
   }, 1000)
 
-  const uiConfig = {
-    // Popup signin flow rather than Navigate flow.
-    signInFlow: "popup",
-    // We will display Google and Facebook as auth providers.
-    signInSuccessUrl: window.location.href + "lobby",
-    signInOptions: [
-      firebase.auth.GoogleAuthProvider.PROVIDER_ID,
-      {
-        provider: firebase.auth.EmailAuthProvider.PROVIDER_ID,
-        requireDisplayName: true
-      },
-      firebase.auth.TwitterAuthProvider.PROVIDER_ID
-    ],
-    callbacks: {
-      // Avoid Navigates after sign-in.
-      signInSuccessWithAuthResult: () => true
-    }
+  const handleSignIn = (event: React.FormEvent) => {
+    event.preventDefault()
+    const user = signInLocal(nickname)
+    dispatch(logIn(user))
   }
-
-  // Initialize Firebase
-  if (!firebase.apps.length) {
-    firebase.initializeApp(FIREBASE_CONFIG)
-  }
-
-  useEffect(() => {
-    firebase.auth().onAuthStateChanged((u) => {
-      if (u) {
-        dispatch(logIn(u))
-      }
-    })
-  })
 
   if (!uid) {
     return (
       <div id="play-panel">
-        <StyledFirebaseAuth
-          uiConfig={uiConfig}
-          firebaseAuth={firebase.auth()}
-        />
-        {/* <AnonymousButton /> */}
-      </div>
-    )
-  } else {
-    return (
-      <div id="play-panel">
-        <p>
-          {t("auth.authenticated_as")}:{" "}
-          <span title={`${displayName}${email ? ` (${email})` : ""}`}>
-            {t("auth.hover_to_reveal")}
-          </span>
-        </p>
-        <ul className="actions">
-          <li>
-            <button
-              className="bubbly green"
-              onClick={preJoinLobby}
-              disabled={prejoining}
-            >
-              {prejoining ? t("auth.connecting") : t("auth.join_lobby")}
-            </button>
-          </li>
-          <li>
-            <button
-              className="bubbly red"
-              disabled={prejoining || loggingOut}
-              onClick={async () => {
-                setLoggingOut(true)
-                try {
-                  await firebase.auth().signOut()
-                  dispatch(logOut())
-                } finally {
-                  setLoggingOut(false)
-                }
-              }}
-            >
-              {loggingOut ? t("auth.signing_out") : t("auth.sign_out")}
-            </button>
-          </li>
-        </ul>
+        <form className="offline-login" onSubmit={handleSignIn}>
+          <label htmlFor="nickname">Nickname / 昵称</label>
+          <input
+            id="nickname"
+            name="nickname"
+            type="text"
+            autoComplete="off"
+            maxLength={20}
+            value={nickname}
+            onChange={(event) => setNickname(event.target.value)}
+            placeholder="Trainer"
+          />
+          <button className="bubbly blue" type="submit">
+            {t("auth.join_lobby")}
+          </button>
+          <p className="offline-hint">
+            Offline mode — no account needed. / 离线模式，无需账号。
+          </p>
+        </form>
       </div>
     )
   }
+
+  return (
+    <div id="play-panel">
+      <p>
+        {t("auth.authenticated_as")}: <span title={displayName}>{displayName}</span>
+      </p>
+      <ul className="actions">
+        <li>
+          <button
+            className="bubbly green"
+            onClick={preJoinLobby}
+            disabled={prejoining}
+          >
+            {prejoining ? t("auth.connecting") : t("auth.join_lobby")}
+          </button>
+        </li>
+        <li>
+          <button
+            className="bubbly red"
+            disabled={prejoining || loggingOut}
+            onClick={async () => {
+              setLoggingOut(true)
+              try {
+                signOutLocal()
+                dispatch(logOut())
+              } finally {
+                setLoggingOut(false)
+              }
+            }}
+          >
+            {loggingOut ? t("auth.signing_out") : t("auth.sign_out")}
+          </button>
+        </li>
+      </ul>
+    </div>
+  )
 }

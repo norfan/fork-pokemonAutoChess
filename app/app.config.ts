@@ -11,11 +11,14 @@ import {
 import cors from "cors"
 import express, { type ErrorRequestHandler } from "express"
 import basicAuth from "express-basic-auth"
-import admin from "firebase-admin"
-import type { UserRecord } from "firebase-admin/auth"
+import {
+  decodeLocalToken,
+  type LocalUserRecord,
+  tokenFromAuthorizationHeader
+} from "./auth/local-auth"
 import helmet from "helmet"
 import { marked } from "marked"
-import { connect } from "mongoose"
+import { connectDB } from "./db/mongoose-shim"
 import path from "path"
 import pkg from "../package.json"
 import {
@@ -61,16 +64,6 @@ import {
   getMetaV2,
   getPlayerRankDistribution
 } from "./services/meta"
-import { getCachedSpriteGapData } from "./services/sprite-gap-scanner"
-import {
-  addTwitchBlacklistEntry,
-  completeTwitchAccountVerification,
-  getTwitchStreamsPayload,
-  listTwitchBlacklist,
-  removeTwitchBlacklistEntry,
-  startTwitchAccountVerification,
-  unlinkTwitchAccount
-} from "./services/twitch"
 import { type ISuggestionUser, Role } from "./types"
 import { DungeonPMDO } from "./types/enum/Dungeon"
 import { Emotion } from "./types/enum/Emotion"
@@ -225,48 +218,18 @@ export const server = defineServer({
 
     app.use(
       helmet({
-        crossOriginOpenerPolicy: false, // required for firebase auth
+        crossOriginOpenerPolicy: false,
         contentSecurityPolicy: {
+          // Offline / LAN build: nothing but this origin is allowed.
           directives: {
-            defaultSrc: [
-              "'self'",
-              "https://*.pokemon-auto-chess.com",
-              "wss://*.pokemon-auto-chess.com",
-              "https://*.firebaseapp.com",
-              "https://apis.google.com",
-              "https://*.googleapis.com",
-              "https://*.doubleclick.net", // google ads, required for youtube embedded
-              "https://*.githubusercontent.com",
-              "http://raw.githubusercontent.com",
-              "https://api.github.com",
-              "https://*.youtube.com",
-              "https://pokemon.darkatek7.com",
-              "https://eternara.site",
-              "https://www.penumbra-autochess.com",
-              "https://pokechess.com.br",
-              "https://uruwhy.online",
-              "https://koala-pac.com",
-              "https://pokev9.52kx.net",
-              "https://www.john-auto-chess.com",
-              "https://pokemon-auto-spire.com",
-              "https://www.pokemon-auto-legacy.com"
-            ],
-            scriptSrc: [
-              "'self'",
-              "'unsafe-inline'",
-              "'unsafe-eval'",
-              "https://apis.google.com",
-              "https://*.googleapis.com",
-              "https://*.doubleclick.net" // google ads, required for youtube embedded
-            ],
-            imgSrc: [
-              "'self'",
-              "data:",
-              "blob:",
-              "https://www.gstatic.com",
-              "http://raw.githubusercontent.com",
-              "https://static-cdn.jtvnw.net"
-            ]
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "blob:"],
+            fontSrc: ["'self'", "data:"],
+            mediaSrc: ["'self'", "blob:"],
+            workerSrc: ["'self'", "blob:"],
+            connectSrc: ["'self'", "ws:", "wss:"]
           }
         }
       })
@@ -328,14 +291,6 @@ export const server = defineServer({
     })
 
     app.get("/map-viewer", (req, res) => {
-      res.sendFile(viewsSrc)
-    })
-
-    app.get("/gameboy", (req, res) => {
-      res.sendFile(viewsSrc)
-    })
-
-    app.get("/translations", (req, res) => {
       res.sendFile(viewsSrc)
     })
 
@@ -441,12 +396,6 @@ export const server = defineServer({
       res.send(getDendrogram())
     })
 
-    app.get("/sprite-gap-scanner", async (req, res) => {
-      // Set Cache-Control header for 24 hours (86400 seconds)
-      setCacheControl(res, 86400)
-      res.send(getCachedSpriteGapData())
-    })
-
     app.get("/meta/types", async (req, res) => {
       const userAuth = await authUser(req, res)
       if (!userAuth) return
@@ -508,75 +457,6 @@ export const server = defineServer({
         res.set("Cache-Control", "no-cache")
       }
       res.send(getLeaderboard()?.eventLeaderboard)
-    })
-
-    app.get("/twitch/streams", async (req, res) => {
-      setCacheControl(res, 120)
-      res.send(getTwitchStreamsPayload())
-    })
-
-    app.post("/twitch/verify/start", async (req, res) => {
-      const userAuth = await authUser(req, res)
-      if (!userAuth) return
-
-      try {
-        const payload = await startTwitchAccountVerification(userAuth.uid)
-        res.status(200).json(payload)
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error"
-        logger.error("Error starting Twitch verification", { error: message })
-        if (
-          message.includes("not configured") ||
-          message.includes("REDIRECT") ||
-          message.includes("STATE_SECRET")
-        ) {
-          res.status(503).json({ error: message })
-          return
-        }
-        res.status(400).json({ error: message })
-      }
-    })
-
-    app.get("/auth/twitch/callback", async (req, res) => {
-      const state = req.query.state?.toString()
-      const code = req.query.code?.toString()
-      const successRedirect =
-        process.env.TWITCH_VERIFY_SUCCESS_REDIRECT || "/auth"
-      const errorRedirect = process.env.TWITCH_VERIFY_ERROR_REDIRECT || "/auth"
-
-      if (!state || !code) {
-        return res.redirect(`${errorRedirect}?twitchVerify=missing_params`)
-      }
-
-      try {
-        await completeTwitchAccountVerification(code, state)
-        return res.redirect(`${successRedirect}?twitchVerify=success`)
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? encodeURIComponent(error.message)
-            : "verification_failed"
-        logger.error("Error completing Twitch verification", { error: message })
-        return res.redirect(`${errorRedirect}?twitchVerify=${message}`)
-      }
-    })
-
-    app.post("/twitch/verify/unlink", async (req, res) => {
-      const userAuth = await authUser(req, res)
-      if (!userAuth) return
-
-      try {
-        await unlinkTwitchAccount(userAuth.uid)
-        res.status(200).send()
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error"
-        if (message === "User not found") {
-          res.status(404).json({ error: message })
-          return
-        }
-        logger.error("Error unlinking Twitch verification", { error: message })
-        res.status(500).json({ error: "Error unlinking Twitch account" })
-      }
     })
 
     app.get("/game-history/:playerUid", async (req, res) => {
@@ -711,21 +591,16 @@ export const server = defineServer({
       res.send(await fetchBot(req.params.id))
     })
 
-    const authUser = async (req, res): Promise<UserRecord | null> => {
-      let user
+    const authUser = async (req, res): Promise<LocalUserRecord | null> => {
       try {
-        //get header Authorization
-        const authHeader = req.headers.authorization
-        if (!authHeader) throw new Error("Unauthorized")
-        const token = authHeader.split(" ")[1]
+        // local offline identity: the bearer token carries uid + nickname
+        const token = tokenFromAuthorizationHeader(req.headers.authorization)
         if (!token) throw new Error("Unauthorized")
-        // get user from firebase
-        const decodedToken = await admin.auth().verifyIdToken(token)
-        user = await admin.auth().getUser(decodedToken.uid)
-        if (!user || !user.displayName) throw new Error("Unauthorized")
+        const user = decodeLocalToken(token)
+        if (!user) throw new Error("Unauthorized")
         return user
       } catch (error) {
-        res.status(401).send(error)
+        res.status(401).send(String(error))
         return null
       }
     }
@@ -735,7 +610,7 @@ export const server = defineServer({
         const userAuth = await authUser(req, res)
         if (!userAuth) return
         const mongoUser = await UserMetadata.findOne({ uid: userAuth.uid })
-        if (!mongoUser) return res.status(404).send("User not found")
+        if (!mongoUser) return res.status(404).json({ error: "User not found" })
         await migrateShardsOfAltForms(mongoUser) // TEMPORARY migration; to be removed in future
         if (!isDevelopment) {
           res.set("Cache-Control", "no-cache")
@@ -968,113 +843,6 @@ export const server = defineServer({
       }
     })
 
-    app.get("/moderation/twitch-blacklist", async (req, res) => {
-      const userAuth = await authUser(req, res)
-      if (!userAuth) return
-      const user = await UserMetadata.findOne({ uid: userAuth.uid })
-      if (!user || (user.role !== Role.ADMIN && user.role !== Role.MODERATOR)) {
-        res.status(403).send("Unauthorized")
-        return
-      }
-
-      try {
-        const blacklist = await listTwitchBlacklist()
-        res.status(200).json(blacklist)
-      } catch (error) {
-        logger.error("Error listing twitch blacklist", error)
-        res.status(500).json({ error: "Error listing twitch blacklist" })
-      }
-    })
-
-    app.post("/moderation/twitch-blacklist", async (req, res) => {
-      const userAuth = await authUser(req, res)
-      if (!userAuth) return
-      const user = await UserMetadata.findOne({ uid: userAuth.uid })
-      if (!user || (user.role !== Role.ADMIN && user.role !== Role.MODERATOR)) {
-        res.status(403).send("Unauthorized")
-        return
-      }
-
-      const streamerLogin = req.body?.streamerLogin
-      const reason = req.body?.reason
-
-      if (!streamerLogin || typeof streamerLogin !== "string") {
-        res.status(400).json({ error: "streamerLogin is required" })
-        return
-      }
-
-      if (reason !== undefined && typeof reason !== "string") {
-        res.status(400).json({ error: "reason must be a string" })
-        return
-      }
-
-      if (typeof reason === "string" && reason.length > 300) {
-        res.status(400).json({ error: "reason is too long" })
-        return
-      }
-
-      try {
-        await addTwitchBlacklistEntry(streamerLogin, user.displayName, reason)
-        logger.info(
-          `${user.displayName} added twitch blacklist entry for ${streamerLogin}`
-        )
-        res.status(201).send()
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error"
-        if (message === "Streamer is already blacklisted") {
-          res.status(409).json({ error: message })
-          return
-        }
-        if (message === "Invalid streamerLogin") {
-          res.status(400).json({ error: message })
-          return
-        }
-        logger.error("Error adding twitch blacklist entry", error)
-        res.status(500).json({ error: "Error adding twitch blacklist entry" })
-      }
-    })
-
-    app.delete(
-      "/moderation/twitch-blacklist/:streamerLogin",
-      async (req, res) => {
-        const userAuth = await authUser(req, res)
-        if (!userAuth) return
-        const user = await UserMetadata.findOne({ uid: userAuth.uid })
-        if (
-          !user ||
-          (user.role !== Role.ADMIN && user.role !== Role.MODERATOR)
-        ) {
-          res.status(403).send("Unauthorized")
-          return
-        }
-
-        try {
-          const wasDeleted = await removeTwitchBlacklistEntry(
-            req.params.streamerLogin
-          )
-          if (!wasDeleted) {
-            res.status(404).json({ error: "Streamer is not blacklisted" })
-            return
-          }
-          logger.info(
-            `${user.displayName} removed twitch blacklist entry for ${req.params.streamerLogin}`
-          )
-          res.status(200).send()
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : "Unknown error"
-          if (message === "Invalid streamerLogin") {
-            res.status(400).json({ error: message })
-            return
-          }
-          logger.error("Error removing twitch blacklist entry", error)
-          res
-            .status(500)
-            .json({ error: "Error removing twitch blacklist entry" })
-        }
-      }
-    )
-
     app.post("/moderation/rename-account", async (req, res) => {
       const userAuth = await authUser(req, res)
       if (!userAuth) return
@@ -1141,15 +909,6 @@ export const server = defineServer({
     /**
      * Before before gameServer.listen() is called.
      */
-    connect(process.env.MONGO_URI!, {
-      socketTimeoutMS: 45000
-    })
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID!,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n")
-      })
-    })
+    connectDB()
   }
 })

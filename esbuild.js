@@ -40,18 +40,18 @@ context({
   bundle: true,
   metafile: true,
   minify: isProdBuild,
-  sourcemap: isProdBuild,
+  sourcemap: isDev,
   plugins: [hashIndexPlugin],
   target: "es2016",
   define: {
-    "process.env.FIREBASE_API_KEY": `"${process.env.FIREBASE_API_KEY}"`,
-    "process.env.FIREBASE_AUTH_DOMAIN": `"${process.env.FIREBASE_AUTH_DOMAIN}"`,
-    "process.env.FIREBASE_PROJECT_ID": `"${process.env.FIREBASE_PROJECT_ID}"`,
-    "process.env.FIREBASE_STORAGE_BUCKET": `"${process.env.FIREBASE_STORAGE_BUCKET}"`,
-    "process.env.FIREBASE_MESSAGING_SENDER_ID": `"${process.env.FIREBASE_MESSAGING_SENDER_ID}"`,
-    "process.env.FIREBASE_APP_ID": `"${process.env.FIREBASE_APP_ID}"`,
-    "process.env.DISCORD_SERVER": `"${process.env.DISCORD_SERVER}"`,
-    "process.env.MIN_HUMAN_PLAYERS": `"${process.env.MIN_HUMAN_PLAYERS}"`
+    // `process` does not exist in the browser. Some modules shared with the
+    // server (config/server/network.ts, colyseus models) read process.env at
+    // module scope, so every remaining access must collapse to undefined
+    // instead of throwing a ReferenceError. The longer key wins over the
+    // generic one, so NODE_ENV keeps its real value.
+    "process.env.NODE_ENV": `"${isProdBuild ? "production" : "development"}"`,
+    "process.env": "{}",
+    "global.process": "{}"
   }
 })
   .then((context) => {
@@ -88,7 +88,7 @@ context({
   format: "iife",
   target: "es2016",
   minify: isProdBuild,
-  sourcemap: isProdBuild
+  sourcemap: isDev
 })
   .then((workerContext) => {
     if (isDev) {

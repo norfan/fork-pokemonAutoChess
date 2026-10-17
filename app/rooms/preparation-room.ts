@@ -6,8 +6,7 @@ import {
   type Delayed,
   Room
 } from "colyseus"
-import admin from "firebase-admin"
-import type { UserRecord } from "firebase-admin/auth"
+import { type LocalUserRecord, verifyLocalToken } from "../auth/local-auth"
 import { MAX_PLAYERS_PER_GAME } from "../config"
 import UserMetadata from "../models/mongo-models/user-metadata"
 import { type IPreparationMetadata, Role, Transfer } from "../types"
@@ -38,7 +37,7 @@ import PreparationState from "./states/preparation-state"
 
 export default class PreparationRoom extends Room<{ state: PreparationState }> {
   dispatcher: Dispatcher<this>
-  clients!: ClientArray<Client<{ auth: UserRecord }>>
+  clients!: ClientArray<Client<{ auth: LocalUserRecord }>>
   private roomPassword: string | null
   autoStartTimeout: Delayed | null = null
 
@@ -366,8 +365,10 @@ export default class PreparationRoom extends Room<{ state: PreparationState }> {
 
   async onAuth(client: Client, options, context) {
     try {
-      const token = await admin.auth().verifyIdToken(options.idToken)
-      const user = await admin.auth().getUser(token.uid)
+      const user = verifyLocalToken(options.idToken, {
+        uid: options.uid,
+        displayName: options.displayName
+      })
       const userProfile = await UserMetadata.findOne({ uid: user.uid })
         .select({ role: 1, banned: 1 })
         .lean()
@@ -422,9 +423,9 @@ export default class PreparationRoom extends Room<{ state: PreparationState }> {
   }
 
   async onJoin(
-    client: Client<{ auth: UserRecord }>,
+    client: Client<{ auth: LocalUserRecord }>,
     options: any,
-    auth: UserRecord | undefined
+    auth: LocalUserRecord | undefined
   ) {
     if (auth) {
       /*logger.info(

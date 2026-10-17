@@ -1,5 +1,4 @@
 import { getStateCallbacks, type Room, type RoomAvailable } from "@colyseus/sdk"
-import firebase from "firebase/compat/app"
 import { t } from "i18next"
 import type { NavigateFunction } from "react-router"
 import type {
@@ -18,9 +17,11 @@ import type {
   IUserMetadataJSON
 } from "../../../types/interfaces/UserMetadata"
 import { logger } from "../../../utils/logger"
+import { getToken } from "../local-auth"
 import {
   authenticateUser,
   client,
+  fetchProfile,
   joinLobby,
   joinPreparation,
   leaveRoom,
@@ -85,13 +86,18 @@ export async function joinLobbyRoom(
 
           if (!room) {
             // otherwise, connect to the lobby room
-            const idToken = await user.getIdToken()
+            const idToken = await getToken()
             room = await client.join<LobbyState>("lobby", { idToken })
           }
 
           if (!room) {
             throw new Error("Failed to join or reconnect to the lobby room")
           }
+
+          // The account row is created by the lobby room's onJoin, so the
+          // profile fetched before joining does not exist yet for a first-time
+          // player. Pull it again now that the row is guaranteed to be there.
+          fetchProfile(true).catch((error) => logger.error(error))
 
           // store reconnection token for 5 minutes ; server may kick the inactive users before that
           dispatch(setConnectionStatus(ConnectionStatus.CONNECTED))
@@ -283,7 +289,7 @@ export async function joinLobbyRoom(
         } catch (error) {
           reject(error)
         }
-      })
+      }).catch(reject) // no local user yet: reject so the caller redirects to the login page
     }
   )
 
@@ -305,7 +311,7 @@ export async function joinExistingPreparationRoom(
   password?: string
 ) {
   try {
-    const token = await firebase.auth().currentUser?.getIdToken()
+    const token = await getToken()
     if (token) {
       dispatch(resetPreparation())
       const room = await client.joinById<PreparationState>(roomId, {

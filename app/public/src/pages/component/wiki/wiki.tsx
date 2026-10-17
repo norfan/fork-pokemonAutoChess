@@ -12,7 +12,6 @@ import WikiStages from "./wiki-stages"
 import WikiStatistic from "./wiki-statistic"
 import WikiStatus from "./wiki-status"
 import WikiTown from "./wiki-town"
-import WikiTutorials from "./wiki-tutorials"
 import WikiTypes from "./wiki-types"
 import WikiWeather from "./wiki-weather"
 import "./wiki.css"
@@ -23,12 +22,7 @@ export default function Wiki({ inGame = false }: { inGame: boolean }) {
     ...(inGame
       ? []
       : [
-          { key: "faq", label: t("wiki.faq.faq"), content: <WikiFaq /> },
-          {
-            key: "tutorials",
-            label: t("wiki.nav.how_to_play"),
-            content: <WikiTutorials />
-          }
+          { key: "faq", label: t("wiki.faq.faq"), content: <WikiFaq /> }
         ]),
     {
       key: "pokemon",

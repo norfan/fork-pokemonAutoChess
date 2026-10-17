@@ -1,5 +1,5 @@
 import type { RoomAvailable } from "@colyseus/sdk"
-import firebase from "firebase/compat/app"
+import { getToken, signOutLocal } from "../local-auth"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
@@ -58,7 +58,7 @@ export default function Lobby() {
 
   const signOut = useCallback(async () => {
     leaveRoom("lobby")
-    await firebase.auth().signOut()
+    signOutLocal()
     dispatch(resetLobby())
     dispatch(resetBoosters())
     dispatch(logOut())
@@ -73,7 +73,7 @@ export default function Lobby() {
   }
 
   const reconnectToGame = throttle(async function reconnectToGame() {
-    const idToken = await firebase.auth().currentUser?.getIdToken()
+    const idToken = await getToken()
     if (idToken && pendingGameId) {
       const game = await client.joinById<GameState>(pendingGameId, {
         idToken

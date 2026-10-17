@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { CDN_URL, type ICreditName } from "../types"
+import type { ICreditName } from "../types"
 
 export interface PokemonCredits {
   portrait_credit: Credit
@@ -38,7 +38,7 @@ export function useCredits() {
 let creditsNamesRequest
 function fetchCreditsNames() {
   if (!creditsNamesRequest) {
-    creditsNamesRequest = fetch(`${CDN_URL}/credit_names.txt`)
+    creditsNamesRequest = fetch("assets/credit_names.txt")
       .then((res) => res.text())
       .then((text) => text.split("\n"))
       .then((lines: string[]) =>
@@ -60,6 +60,7 @@ function fetchCreditsNames() {
           return credit
         })
       )
+      .catch(() => [] as ICreditName[])
   }
 
   return creditsNamesRequest

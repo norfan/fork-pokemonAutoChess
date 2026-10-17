@@ -10,7 +10,6 @@ import { GADGETS } from "../../config/game/gadgets"
 import { CollectionUtils } from "../../core/collection"
 import { getPendingGame } from "../../core/pending-game-manager"
 import UserMetadata from "../../models/mongo-models/user-metadata"
-import { discordService } from "../../services/discord"
 import { notificationsService } from "../../services/notifications"
 import { Emotion, Role, type Title, Transfer } from "../../types"
 import { CloseCodes } from "../../types/enum/CloseCodes"
@@ -415,7 +414,6 @@ export class BanUserCommand extends Command<
             `${user.displayName} banned the user ${bannedUser.displayName}`
           )
 
-          discordService.announceBan(user, bannedUser, reason)
           bannedUser.banned = true
           client.send(Transfer.USER, bannedUser)
         } else {
@@ -465,7 +463,6 @@ export class UnbanUserCommand extends Command<
             Transfer.ALERT,
             `${user.displayName} unbanned the user ${unbannedUser?.displayName} (User ID: ${uid})`
           )
-          discordService.announceUnban(user, unbannedUser, reason)
           unbannedUser.banned = false
           client.send(Transfer.USER, unbannedUser)
         } else {

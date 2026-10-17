@@ -101,15 +101,6 @@ export default function GameOptionsModal(props: {
           {props.page === "main_lobby" && (
             <fieldset>
               <LanguageSelect showLabel />
-              <p className="info">
-                {t("options.community_translations")}{" "}
-                <a
-                  href="https://discord.com/channels/737230355039387749/1488242758232834282"
-                  target="_blank"
-                >
-                  Discord
-                </a>
-              </p>
             </fieldset>
           )}
 

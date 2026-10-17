@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose"
+import { model, Schema } from "../../db/mongoose-shim"
 
 interface ISpriteGapCache {
   _id: string

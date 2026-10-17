@@ -1,5 +1,5 @@
-import firebase from "firebase/compat/app"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { getToken } from "../../../local-auth"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router"
 import {
@@ -30,7 +30,6 @@ import { max, min } from "../../../../../utils/number"
 import { joinLobbyRoom } from "../../../game/lobby-logic"
 import { useAppDispatch, useAppSelector } from "../../../hooks"
 import type { IBot } from "../../../models/bot-v2"
-import DiscordButton from "../buttons/discord-button"
 import { Modal } from "../modal/modal"
 import ImportBotModal from "./import-bot-modal"
 import ScoreIndicator from "./score-indicator"
@@ -245,11 +244,6 @@ export default function BotBuilder() {
           {t("back_to_lobby")}
         </button>
         <p>{t("bot_builder.guidelines")}</p>
-        <DiscordButton
-          url={
-            "https://discord.com/channels/737230355039387749/914503292875325461"
-          }
-        />
         <div className="spacer"></div>
         {isBotManager && (
           <button onClick={() => navigate("/bot-admin")} className="bubbly red">
@@ -377,7 +371,7 @@ export function SubmitBotModal(props: {
     setError("")
     setSuccess(false)
     try {
-      const token = await firebase.auth().currentUser?.getIdToken()
+      const token = await getToken()
       const res = await fetch("/bots", {
         method: "POST",
         headers: {
@@ -407,15 +401,6 @@ export function SubmitBotModal(props: {
         canSubmit ? (
           <>
             <p>{t("bot_builder.bot_ready_submission")}</p>
-            <p>
-              <a
-                href="https://discord.com/channels/737230355039387749/914503292875325461"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {t("bot_builder.bot_creation_discord_channel")}
-              </a>
-            </p>
           </>
         ) : (
           <p>{t("bot_builder.bot_not_ready_submission")}</p>

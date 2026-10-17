@@ -20,20 +20,15 @@ export default function Credits(props: {
   if (!credits) return null
 
   function findCredits(id: string) {
-    let contact = ""
+    // Names only: this build has no outbound links.
     let name = ""
     if (creditsNames) {
       const user = creditsNames.find((user) => user.discord === id)
       if (user != null) {
-        contact = user.contact
         name = user.name
       }
     }
-    return contact ? (
-      <a style={{ marginRight: "0.5em" }} key={id} href={contact}>
-        {name}
-      </a>
-    ) : name ? (
+    return name ? (
       <span style={{ marginRight: "0.5em" }} key={id}>
         {name}
       </span>

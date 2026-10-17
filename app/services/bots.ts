@@ -1,10 +1,9 @@
 import { logger } from "colyseus"
-import type { mongo } from "mongoose"
+import type { mongo } from "../db/mongoose-shim"
 import { BotV2 } from "../models/mongo-models/bot-v2"
 import type { Pkm } from "../types/enum/Pokemon"
 import type { IUserMetadataMongo } from "../types/interfaces/UserMetadata"
 import type { IBot, IStep } from "../types/models/bot-v2"
-import { discordService } from "./discord"
 
 export type IBotListItem = Omit<IBot, "steps">
 
@@ -109,7 +108,6 @@ export async function addBotToDatabase(bot: {
   })
 
   logger.info(`Bot with id ${resultCreate.id} created`)
-  discordService.announceBotCreation(resultCreate)
   return resultCreate
 }
 

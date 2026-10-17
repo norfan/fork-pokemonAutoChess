@@ -1,5 +1,5 @@
-import firebase from "firebase/compat/app"
 import React, { useEffect, useState } from "react"
+import { getToken } from "../../../local-auth"
 import { useTranslation } from "react-i18next"
 import {
   BOTS_ENABLED,
@@ -116,7 +116,7 @@ export default function PreparationMenu() {
 
   const startGame = throttle(async function startGame() {
     if (rooms.preparation) {
-      const token = await firebase.auth().currentUser?.getIdToken()
+      const token = await getToken()
       if (token) {
         gameStartRequest(token)
       }

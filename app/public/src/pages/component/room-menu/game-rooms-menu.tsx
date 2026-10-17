@@ -1,5 +1,5 @@
 import type { RoomAvailable } from "@colyseus/sdk"
-import firebase from "firebase/compat/app"
+import { getToken } from "../../../local-auth"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
@@ -86,7 +86,7 @@ export function IngameRoomsList({ gameMode }: { gameMode?: GameMode }) {
   const connectToGame = throttle(async function connectToGame(
     selectedRoom: RoomAvailable<IGameMetadata>
   ) {
-    const token = await firebase.auth().currentUser?.getIdToken()
+    const token = await getToken()
     if (rooms.lobby && !isJoining && token) {
       setJoining(true)
       const game = await client.joinById<GameState>(selectedRoom.roomId, {

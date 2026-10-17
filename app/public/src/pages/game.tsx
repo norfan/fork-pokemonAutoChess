@@ -1,5 +1,5 @@
 import { getStateCallbacks, type Room } from "@colyseus/sdk"
-import firebase from "firebase/compat/app"
+import { getToken } from "../local-auth"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
@@ -284,7 +284,7 @@ export default function Game() {
     }
     const afterPlayers = new Array<IAfterGamePlayer>()
 
-    const token = await firebase.auth().currentUser?.getIdToken()
+    const token = await getToken()
 
     const nbPlayers = room?.state.players.size ?? 0
     const hasLeftBeforeEnd =
@@ -446,12 +446,18 @@ export default function Game() {
     clearPortraitBase64Cache()
     const connect = () => {
       logger.debug("connecting to game")
-      authenticateUser().then(async (user) => {
-        if (user && !connecting.current) {
-          connecting.current = true
-          await connectToGame()
-        }
-      })
+      authenticateUser()
+        .then(async (user) => {
+          if (user && !connecting.current) {
+            connecting.current = true
+            await connectToGame()
+          }
+        })
+        .catch((err) => {
+          // no local identity yet: the player must log in first
+          logger.error(err)
+          navigate("/")
+        })
     }
 
     if (rooms.game?.connection.isOpen) {

@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose"
+import { model, Schema } from "../../db/mongoose-shim"
 import type { IMetaV2 } from "../../types/models/meta-v2"
 
 const meanTeamSchema = new Schema({

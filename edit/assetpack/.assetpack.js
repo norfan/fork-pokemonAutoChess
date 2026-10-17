@@ -131,6 +131,13 @@ function texturePackAtlas() {
       //fs.writeJSONSync("tree.json", tree)
       fs.writeJSONSync(atlasPath, atlas)
 
+      // The atlas file is copied to the output folder *before* this finish hook runs,
+      // so the copy in dist would keep a stale version. Keep both in sync.
+      fs.writeJSONSync(
+        "../../app/public/dist/client/assets/atlas.json",
+        atlas
+      )
+
       const sw = fs.readFileSync("../../app/public/dist/client/sw.js", "utf8")
       fs.writeFileSync(
         "../../app/public/dist/client/sw.js",

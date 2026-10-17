@@ -1,12 +1,10 @@
 import type { Room } from "@colyseus/sdk"
-import type { User } from "@firebase/auth-types"
-import firebase from "firebase/compat/app"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import { flushSync } from "react-dom"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
 import pkg from "../../../../package.json"
-import { FIREBASE_CONFIG } from "../../../config"
+import { getLocalUser, type LocalUser } from "../local-auth"
 import type GameState from "../../../rooms/states/game-state"
 import { GameMode, GamePhaseState } from "../../../types/enum/Game"
 import {
@@ -112,28 +110,23 @@ export default function Replay() {
 
   // full teardown on any /replay exit: restore real uid, reset GameStore (clears the spectated player's stale shop/board), drop the dead room, else it leaks into the next match
   useEffect(() => {
-    // a cold page load at /replay skips the login/auth flow, so nothing has initialized the firebase app
-    // yet; init it here (no sign-in) or any firebase.auth() access while watching throws app-compat/no-app
-    if (!firebase.apps.length) {
-      firebase.initializeApp(FIREBASE_CONFIG)
-    }
     // re-arm on (re)mount: StrictMode's setup/cleanup/setup sets aliveRef false and refs persist, so without this every deferred buildAndBoot bails
     aliveRef.current = true
     return () => {
       aliveRef.current = false // stop a deferred index build (loadManifest) from booting into this torn-down page
       // stop the current room's timer on every exit: browser-Back's confirmLeave closure holds the initial room, not replayRoom.current, so after a seek a live timer would re-pollute Redux right after we reset it
       replayRoom.current?.pause()
-      // restore the real uid: prefer the captured Redux identity (keeps displayName), else firebase.auth().currentUser
+      // restore the real uid: prefer the captured Redux identity (keeps displayName), else the local identity
       const captured = realIdentity.current
-      const fbUser = firebase.auth().currentUser
+      const localUser = getLocalUser()
       const real = captured?.uid
         ? captured
-        : fbUser
-          ? { uid: fbUser.uid, displayName: fbUser.displayName ?? "" }
+        : localUser
+          ? { uid: localUser.uid, displayName: localUser.displayName ?? "" }
           : null
       if (real?.uid)
         dispatch(
-          logIn({ uid: real.uid, displayName: real.displayName } as User)
+          logIn({ uid: real.uid, displayName: real.displayName } as LocalUser)
         )
       dispatch(leaveGame(undefined)) // arity-0 reducer; RTK types it as needing an (ignored) payload
       rooms.game = undefined
@@ -195,7 +188,7 @@ export default function Replay() {
         logIn({
           uid: manifest.viewerUid,
           displayName: manifest.viewerUid
-        } as User)
+        } as LocalUser)
       )
       prevBoardRef.current = null
       setReady(true)

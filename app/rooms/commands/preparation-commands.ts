@@ -2,8 +2,8 @@ import { memoryUsage } from "node:process"
 import { setTimeout } from "node:timers/promises"
 import { Command } from "@colyseus/command"
 import { type Client, matchMaker } from "colyseus"
-import type { UserRecord } from "firebase-admin/auth"
-import type { QueryFilter } from "mongoose"
+import type { LocalUserRecord } from "../../auth/local-auth"
+import type { QueryFilter } from "../../db/mongoose-shim"
 import {
   EloRankThreshold,
   MAX_PLAYERS_PER_GAME,
@@ -65,9 +65,9 @@ function autoAssignPartner(state: PreparationRoom["state"], uid: string) {
 export class OnJoinCommand extends Command<
   PreparationRoom,
   {
-    client: Client<{ auth: UserRecord }>
+    client: Client<{ auth: LocalUserRecord }>
     options: any
-    auth: UserRecord
+    auth: LocalUserRecord
   }
 > {
   async execute({ client, options, auth }) {

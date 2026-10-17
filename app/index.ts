@@ -18,11 +18,6 @@ import { initializeMetrics } from "./metrics"
 import { initCronJobs } from "./services/cronjobs"
 import { fetchLeaderboards } from "./services/leaderboard"
 import { fetchMetaReports } from "./services/meta"
-import {
-  refreshSpriteGapData,
-  warmupSpriteGapScanner
-} from "./services/sprite-gap-scanner"
-import { refreshTwitchBlacklist, refreshTwitchStreams } from "./services/twitch"
 import { MaintenanceOrder } from "./types/enum/MaintenanceOrder"
 
 /*
@@ -43,7 +38,6 @@ async function main() {
       // only the first thread of the first machine will create the lobby and init cron jobs
       await matchMaker.createRoom("lobby", {})
       checkLobby()
-      warmupSpriteGapScanner()
     }
     initCronJobs(isLobbyThread)
   } else {
@@ -51,7 +45,6 @@ async function main() {
     await listen(app, process.env.PORT ? parseInt(process.env.PORT) : 9000)
     await matchMaker.createRoom("lobby", {})
     initCronJobs(true)
-    warmupSpriteGapScanner()
   }
 
   logger.info("Fetching leaderboards...")
@@ -59,11 +52,6 @@ async function main() {
   setInterval(() => fetchLeaderboards(), 1000 * 60 * 10) // refresh every 10 minutes
   logger.info("Fetching meta reports...")
   fetchMetaReports()
-  logger.info("Fetching Twitch streams...")
-  refreshTwitchBlacklist()
-  setInterval(() => refreshTwitchBlacklist(), 1000 * 60)
-  refreshTwitchStreams()
-  setInterval(() => refreshTwitchStreams(), 1000 * 60 * 5) // refresh every 5 minutes
   listenForMaintenanceOrders()
 }
 
@@ -120,12 +108,6 @@ function listenForMaintenanceOrders() {
         fetchLeaderboards()
       } else if (order === MaintenanceOrder.FETCH_META_REPORTS) {
         fetchMetaReports()
-      } else if (order === MaintenanceOrder.REFRESH_SPRITE_GAP_DATA) {
-        refreshSpriteGapData(true)
-      } else if (order === MaintenanceOrder.REFRESH_TWITCH_STREAMS) {
-        refreshTwitchStreams()
-      } else if (order === MaintenanceOrder.REFRESH_TWITCH_BLACKLIST) {
-        refreshTwitchBlacklist()
       }
     }
   )

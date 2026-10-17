@@ -9,11 +9,9 @@ export const GADGETS_NAMES = [
   "certificate",
   "recorder",
   "synergy_wheel",
-  "gameboy",
   "pokeguesser",
   "bot_builder",
-  "tier_list_maker",
-  "sprite_tracker"
+  "tier_list_maker"
 ] as const
 
 export type GadgetName = (typeof GADGETS_NAMES)[number]
@@ -66,11 +64,6 @@ export const GADGETS: Record<GadgetName, Gadget> = {
     icon: "synergy-wheel",
     levelRequired: 15
   },
-  gameboy: {
-    name: "gameboy",
-    icon: "gameboy",
-    levelRequired: 20
-  },
   tier_list_maker: {
     name: "tier_list_maker",
     icon: "tier-list",
@@ -86,11 +79,6 @@ export const GADGETS: Record<GadgetName, Gadget> = {
     icon: "bot",
     levelRequired: 40,
     disabled: !BOTS_ENABLED
-  },
-  sprite_tracker: {
-    name: "sprite_tracker",
-    icon: "pokemon-sprite",
-    levelRequired: 50
   }
 } as const
 

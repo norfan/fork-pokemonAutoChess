@@ -30,8 +30,6 @@ import Patchnotes from "../patchnotes/patchnotes"
 import { usePatchVersion } from "../patchnotes/usePatchVersion"
 import PokeGuesser from "../pokeguesser/pokeguesser"
 import Profile from "../profile/profile"
-import ServersList from "../servers/servers-list"
-import SpriteTrackerModal from "../sprite-tracker/sprite-tracker-modal"
 import SynergyWheelModal from "../synergy-wheel/synergy-wheel"
 import TierListMakerModal from "../tier-list/tier-list-maker-modal"
 import Wiki from "../wiki/wiki"
@@ -292,15 +290,6 @@ export function MainSidebar(props: MainSidebarProps) {
             </NavLink>
           )}
 
-        {page !== "game" &&
-          ((!GADGETS.gameboy.disabled &&
-            profileLevel >= GADGETS.gameboy.levelRequired) ||
-            profile?.role === Role.ADMIN) && (
-            <NavLink svg="gameboy" onClick={() => navigate("/gameboy")}>
-              {t("gadget.gameboy")}
-            </NavLink>
-          )}
-
         {((!GADGETS.tier_list_maker.disabled &&
           profileLevel >= GADGETS.tier_list_maker.levelRequired) ||
           profile?.role === Role.ADMIN) && (
@@ -310,18 +299,6 @@ export function MainSidebar(props: MainSidebarProps) {
             handleClick={changeModal}
           >
             {t("gadget.tier_list_maker")}
-          </NavLink>
-        )}
-
-        {((!GADGETS.sprite_tracker.disabled &&
-          profileLevel >= GADGETS.sprite_tracker.levelRequired) ||
-          profile?.role === Role.ADMIN) && (
-          <NavLink
-            svg="pokemon-sprite"
-            location="sprite-tracker"
-            handleClick={changeModal}
-          >
-            {t("gadget.sprite_tracker")}
           </NavLink>
         )}
 
@@ -375,27 +352,6 @@ export function MainSidebar(props: MainSidebarProps) {
         )}
 
         <div className="spacer"></div>
-
-        {page !== "game" && (
-          <NavLink
-            svg="players"
-            className="community-servers"
-            location="servers"
-            handleClick={changeModal}
-          >
-            {t("servers_list.title")}
-          </NavLink>
-        )}
-
-        {page !== "game" && (
-          <NavLink
-            svg="discord"
-            className="discord"
-            onClick={() => window.open(process.env.DISCORD_SERVER, "_blank")}
-          >
-            Discord
-          </NavLink>
-        )}
 
         {isReplayRoom(rooms.game) ? (
           <NavLink
@@ -512,8 +468,6 @@ export type Modals =
   | "options"
   | "pokeguesser"
   | "profile"
-  | "servers"
-  | "sprite-tracker"
   | "synergy-wheel"
   | "team-builder"
   | "tier-list"
@@ -587,24 +541,12 @@ function Modals({
       <Modal show={modal === "meta"} header={t("meta")} onClose={closeModal}>
         <MetaReport />
       </Modal>
-      <Modal
-        onClose={closeModal}
-        show={modal === "servers"}
-        className="servers-modal"
-        header={t("servers_list.title")}
-      >
-        <ServersList />
-      </Modal>
       <TeamBuilderModal
         show={modal === "team-builder"}
         handleClose={closeModal}
       />
       <TierListMakerModal
         show={modal === "tier-list"}
-        handleClose={closeModal}
-      />
-      <SpriteTrackerModal
-        show={modal === "sprite-tracker"}
         handleClose={closeModal}
       />
       <GameOptionsModal

@@ -1,1 +1,0 @@
-run update-items to replace SOOTHE_BELL by PROTECTIVE_PADS and FIRE_GEM by PUNCHING_GLOVE on bots and itemsStatistic

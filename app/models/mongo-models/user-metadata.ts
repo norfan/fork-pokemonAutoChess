@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose"
+import { model, Schema } from "../../db/mongoose-shim"
 import { ExpThreshold } from "../../config"
 import { GADGETS_UNLOCKED_BY_LEVEL } from "../../config/game/gadgets"
 import { CollectionUtils } from "../../core/collection"
@@ -217,8 +217,8 @@ export async function getPlayedPokemonIndexes(
 ): Promise<Set<string>> {
   // pokemonCollection is a BSON document, so $objectToArray turns it into {k, v} rows
   // and all we need are the keys of the entries whose played counter is above zero.
-  const rows = await UserMetadataModel.collection
-    .aggregate<{ index: string }>([
+  const rows = (await UserMetadataModel.collection
+    .aggregate([
       { $match: { uid } },
       {
         $project: {
@@ -230,7 +230,7 @@ export async function getPlayedPokemonIndexes(
       { $match: { "entries.v.played": { $gt: 0 } } },
       { $project: { _id: 0, index: "$entries.k" } }
     ])
-    .toArray()
+    .toArray()) as Array<{ index: string }>
 
   return new Set(rows.map((row) => row.index))
 }

@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose"
+import { model, Schema } from "../../db/mongoose-shim"
 import { DungeonPMDO } from "../../types/enum/Dungeon"
 import type { IRegionStatistic } from "../../types/models/regions-statistic"
 

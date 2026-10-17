@@ -1,7 +1,7 @@
 import { Dispatcher } from "@colyseus/command"
 import type { MapSchema } from "@colyseus/schema"
 import { type Client, CloseCode, Room } from "colyseus"
-import admin from "firebase-admin"
+import { verifyLocalToken } from "../auth/local-auth"
 import {
   ALLOWED_GAME_RECONNECTION_TIME,
   BOARD_WIDTH,
@@ -317,7 +317,7 @@ export default class GameRoom extends Room<{ state: GameState }> {
           player.doubleUpPartnerId = user.doubleUpPartnerId ?? ""
           player.doubleUpTeamId = user.doubleUpTeamId ?? ""
         } else {
-          const leanUser = await UserMetadata.findOne({ uid })
+          const leanUser = (await UserMetadata.findOne({ uid })
             .select({
               // Player only needs each entry's selectedEmotion/selectedShiny and the
               // avatar entry's unlocked mask, so drop the rest of the collection
@@ -328,7 +328,7 @@ export default class GameRoom extends Room<{ state: GameState }> {
               eventData: 0,
               titles: 0
             })
-            .lean<IUserMetadataForPlayer>()
+            .lean()) as IUserMetadataForPlayer | null
           const user = leanUser
             ? { ...leanUser, pokemonCollection: toPlayerCollection(leanUser) }
             : null
@@ -732,8 +732,10 @@ export default class GameRoom extends Room<{ state: GameState }> {
   async onAuth(client: Client, options, context) {
     try {
       super.onAuth(client, options, context)
-      const token = await admin.auth().verifyIdToken(options.idToken)
-      const user = await admin.auth().getUser(token.uid)
+      const user = verifyLocalToken(options.idToken, {
+        uid: options.uid,
+        displayName: options.displayName
+      })
 
       if (!user.displayName) {
         logger.error("No display name for this account", user.uid)

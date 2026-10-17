@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose"
+import { model, Schema } from "../../db/mongoose-shim"
 import { Title } from "../../types"
 import type { ITitleStatistic } from "../../types/models/title-statistic"
 

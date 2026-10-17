@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose"
+import { model, Schema } from "../../db/mongoose-shim"
 import type { IReportMetadata } from "../../types/models/report-metadata"
 
 const metadataSchema = new Schema({

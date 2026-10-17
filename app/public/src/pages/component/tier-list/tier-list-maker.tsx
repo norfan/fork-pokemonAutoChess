@@ -83,26 +83,6 @@ export default function TierListMaker() {
     }
   }
 
-  async function shareOnDiscord() {
-    try {
-      // First copy the image to clipboard
-      await exportElementAsImage({
-        selector: ".tier-list-table",
-        excludeSelector: ".tier-list-actions-column",
-        filename: tierList.name,
-        preferClipboard: true
-      })
-
-      // Open Discord channel in new tab
-      const discordChannelUrl =
-        "https://discord.com/channels/737230355039387749/1126145783889145887"
-      window.open(discordChannelUrl, "_blank")
-    } catch (error) {
-      console.error("Error sharing to Discord:", error)
-      alert("Failed to prepare tier list for Discord sharing")
-    }
-  }
-
   function reset() {
     setTierList(getInitialTierList())
   }
@@ -137,9 +117,6 @@ export default function TierListMaker() {
         </button>
         <button className="bubbly blue" onClick={downloadImage}>
           <img src="assets/ui/save.svg" /> {t("tier_list.download_image")}
-        </button>
-        <button className="bubbly blue" onClick={shareOnDiscord}>
-          <img src="assets/ui/share.svg" /> {t("tier_list.share_on_discord")}
         </button>
         <button className="bubbly red" onClick={reset}>
           <img src="assets/ui/trash.svg" /> {t("reset")}

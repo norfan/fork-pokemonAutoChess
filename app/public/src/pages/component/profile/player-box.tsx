@@ -26,9 +26,6 @@ export default function PlayerBox(props: {
   const pokemons: Pkm[] = []
   const [favoritePokemons, setFavoritePokemons] = useState<Pkm[]>([])
   const [favoriteSynergies, setFavoriteSynergies] = useState<Synergy[]>([])
-  const twitchUrl = props.user.twitchLogin
-    ? `https://www.twitch.tv/${props.user.twitchLogin}`
-    : null
 
   useEffect(() => {
     if (!props.history) return
@@ -84,18 +81,6 @@ export default function PlayerBox(props: {
           >
             {props.user.displayName}
           </p>
-          {twitchUrl && (
-            <a
-              className="twitch-badge-link"
-              href={twitchUrl}
-              target="_blank"
-              rel="noreferrer"
-              title={`Watch ${props.user.twitchDisplayName ?? props.user.twitchLogin} on Twitch`}
-              aria-label={`Watch ${props.user.twitchDisplayName ?? props.user.twitchLogin} on Twitch`}
-            >
-              <img src="/assets/ui/twitch.png" alt="" aria-hidden="true" />
-            </a>
-          )}
         </div>
       </div>
       <div

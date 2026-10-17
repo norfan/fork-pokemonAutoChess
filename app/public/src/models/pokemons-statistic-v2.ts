@@ -1,4 +1,4 @@
-import firebase from "firebase/compat/app"
+import { getToken } from "../local-auth"
 import type { ITypeStatistics } from "../../../types/meta"
 import type { IPokemonsStatisticV2 } from "../../../types/models/pokemons-statistic-v2"
 
@@ -13,7 +13,7 @@ export async function fetchMetaPokemons(): Promise<IPokemonsStatisticV2[]> {
 }
 
 export async function fetchMetaTypes(): Promise<ITypeStatistics> {
-  const token = await firebase.auth().currentUser?.getIdToken()
+  const token = await getToken()
   return fetch(`/meta/types?t=${new Date().getUTCDate()}`, {
     headers: {
       Authorization: `Bearer ${token}`

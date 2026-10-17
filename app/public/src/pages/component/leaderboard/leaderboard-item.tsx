@@ -15,9 +15,6 @@ export default function LeaderboardItem(props: {
 }) {
   const { t } = useTranslation()
   const player = props.item as ILeaderboardInfo
-  const twitchUrl = player.twitchLogin
-    ? `https://www.twitch.tv/${player.twitchLogin}`
-    : null
 
   return (
     <div
@@ -59,33 +56,6 @@ export default function LeaderboardItem(props: {
             }}
           >
             <span>{props.item.name}</span>
-            {twitchUrl && (
-              <a
-                className="twitch-badge-link"
-                href={twitchUrl}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(event) => {
-                  event.stopPropagation()
-                }}
-                title={`Watch ${player.twitchDisplayName ?? player.twitchLogin} on Twitch`}
-                aria-label={`Watch ${player.twitchDisplayName ?? player.twitchLogin} on Twitch`}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "var(--cursor-hover)"
-                }}
-              >
-                <img
-                  src="/assets/ui/twitch.png"
-                  width={16}
-                  height={16}
-                  alt=""
-                  aria-hidden="true"
-                />
-              </a>
-            )}
           </span>
         )}
       </span>

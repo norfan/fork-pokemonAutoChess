@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose"
+import { model, Schema } from "../../db/mongoose-shim"
 import type { Pkm } from "../../types/enum/Pokemon"
 import type { Synergy } from "../../types/enum/Synergy"
 

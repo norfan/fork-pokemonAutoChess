@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose"
+import { model, Schema } from "../../db/mongoose-shim"
 import type { IChatV2 } from "../../types/index"
 
 const chatSchema = new Schema({

@@ -1,6 +1,6 @@
-import type { User } from "@firebase/auth-types"
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
 import { CollectionUtils } from "../../../core/collection"
+import type { LocalUser } from "../local-auth"
 import { type Emotion, type Title, Transfer } from "../../../types"
 import { ConnectionStatus } from "../../../types/enum/ConnectionStatus"
 import type { Language } from "../../../types/enum/Language"
@@ -42,7 +42,7 @@ export const networkSlice = createSlice({
   name: "network",
   initialState: initalState,
   reducers: {
-    logIn: (state, action: PayloadAction<User>) => {
+    logIn: (state, action: PayloadAction<LocalUser>) => {
       if (action.payload) {
         state.uid = action.payload.uid
         state.displayName = action.payload.displayName ?? "Anonymous"

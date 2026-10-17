@@ -83,28 +83,8 @@ export default function WikiFaq() {
         <p>{t("wiki.faq.shiny_answer")}</p>
       </details>
       <details className="my-box">
-        <summary>{t("wiki.faq.support")}</summary>
-        <p>
-          {t("wiki.faq.support_answer")}
-          &nbsp;<a href="https://en.tipeee.com/keldaan">Tipee</a>.
-        </p>
-      </details>
-      <details className="my-box">
         <summary>{t("wiki.faq.mobile")}</summary>
         <p>{t("wiki.faq.mobile_answer")}</p>
-      </details>
-      <details className="my-box">
-        <summary>{t("wiki.faq.code")}</summary>
-        <p>
-          {t("wiki.faq.code_answer")},&nbsp;
-          <a
-            href="https://github.com/keldaanCommunity/pokemonAutoChess"
-            target="_blank"
-          >
-            {t("wiki.faq.pull_requests")}
-          </a>{" "}
-          !
-        </p>
       </details>
     </div>
   )

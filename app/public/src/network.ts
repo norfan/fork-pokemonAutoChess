@@ -1,8 +1,5 @@
 import { Client, type Room } from "@colyseus/sdk"
-import type { User } from "@firebase/auth-types"
-import firebase from "firebase/compat/app"
 import type { server } from "../../app.config.ts"
-import { FIREBASE_CONFIG } from "../../config"
 import type AfterGameState from "../../rooms/states/after-game-state"
 import type GameState from "../../rooms/states/game-state"
 import type LobbyState from "../../rooms/states/lobby-state"
@@ -16,6 +13,7 @@ import type { MaintenanceOrder } from "../../types/enum/MaintenanceOrder"
 import type { SpecialGameRule } from "../../types/enum/SpecialGameRule"
 import type { IUserMetadataJSON } from "../../types/interfaces/UserMetadata"
 import { logger } from "../../utils/logger"
+import { getLocalUser, getToken, type LocalUser } from "./local-auth"
 import type { IBot } from "./models/bot-v2"
 import { LocalStoreKeys, localStore } from "./pages/utils/store.js"
 import store from "./stores"
@@ -31,72 +29,33 @@ logger.info(`Colyseus endpoint: ${endpoint}`)
 export const client = new Client<typeof server>(endpoint)
 
 export function authenticateUser() {
-  if (!firebase.apps.length) {
-    firebase.initializeApp(FIREBASE_CONFIG)
-  }
-
-  return new Promise<User>((resolve, reject) => {
-    firebase.auth().onAuthStateChanged(async (user) => {
-      if (!user) return reject(CloseCodes.USER_NOT_AUTHENTICATED)
-      store.dispatch(logIn(user))
-      fetchProfile(true)
-      resolve(user)
-    })
+  return new Promise<LocalUser>((resolve, reject) => {
+    const user = getLocalUser()
+    if (!user) return reject(CloseCodes.USER_NOT_AUTHENTICATED)
+    store.dispatch(logIn(user))
+    fetchProfile(true)
+    resolve(user)
   })
 }
 
 export async function fetchProfile(forceRefresh: boolean = false) {
   const profile = store.getState().network.profile
-  const token = await firebase.auth().currentUser?.getIdToken()
+  const token = await getToken()
   if (!forceRefresh && profile) {
     return Promise.resolve(profile)
   }
-  return fetch(`/profile?t=${Date.now()}`, {
+  const res = await fetch(`/profile?t=${Date.now()}`, {
     headers: {
       Authorization: `Bearer ${token}`
     }
   })
-    .then((res) => res.json())
-    .then((profile: IUserMetadataJSON) => {
-      store.dispatch(setProfile(profile))
-    })
-}
-
-export type TwitchVerificationStartResponse = {
-  authorizeUrl: string
-  expiresAt: string
-}
-
-export async function startTwitchVerification(): Promise<TwitchVerificationStartResponse> {
-  const token = await firebase.auth().currentUser?.getIdToken()
-  const res = await fetch("/twitch/verify/start", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  })
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(body.error ?? res.statusText)
-  }
-
-  return res.json()
-}
-
-export async function unlinkTwitchVerification(): Promise<void> {
-  const token = await firebase.auth().currentUser?.getIdToken()
-  const res = await fetch("/twitch/verify/unlink", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  })
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(body.error ?? res.statusText)
-  }
+  // A brand-new local player has no UserMetadata row yet: the server answers
+  // 404 before the lobby room creates the account, so there is nothing to
+  // parse. Returning early keeps that from surfacing as an uncaught
+  // "Unexpected token ... is not valid JSON" error in the console.
+  if (!res.ok) return
+  const fetchedProfile: IUserMetadataJSON | null = await res.json().catch(() => null)
+  if (fetchedProfile) store.dispatch(setProfile(fetchedProfile))
 }
 
 export const rooms: {
@@ -259,7 +218,7 @@ export async function buyEmotion(params: {
   emotion: Emotion
   shiny: boolean
 }) {
-  const token = await firebase.auth().currentUser?.getIdToken()
+  const token = await getToken()
   if (!token) throw new Error("User not authenticated")
 
   const res = await fetch("/collection/buy-emotion", {
@@ -286,7 +245,7 @@ export async function changeSelectedEmotion(params: {
   emotion: Emotion | null
   shiny: boolean
 }) {
-  const token = await firebase.auth().currentUser?.getIdToken()
+  const token = await getToken()
   if (!token) throw new Error("User not authenticated")
 
   const res = await fetch("/collection/change-selected-emotion", {
@@ -309,7 +268,7 @@ export async function changeSelectedEmotion(params: {
 }
 
 export async function buyBooster(params: { index: string }) {
-  const token = await firebase.auth().currentUser?.getIdToken()
+  const token = await getToken()
   if (!token) throw new Error("User not authenticated")
 
   const res = await fetch("/boosters/buy", {
@@ -332,7 +291,7 @@ export async function buyBooster(params: { index: string }) {
 }
 
 export async function openBooster() {
-  const token = await firebase.auth().currentUser?.getIdToken()
+  const token = await getToken()
   const res = await fetch("/boosters/open", {
     method: "POST",
     headers: {
@@ -410,7 +369,7 @@ export function kick(playerId: string) {
 export async function searchMessages(
   query: string
 ): Promise<import("../../types").IChatV2[]> {
-  const token = await firebase.auth().currentUser?.getIdToken()
+  const token = await getToken()
   const res = await fetch(
     `/moderation/chat-search?query=${encodeURIComponent(query)}`,
     { headers: { Authorization: `Bearer ${token}` } }
@@ -423,7 +382,7 @@ export async function renameAccount(
   uid: string,
   newName: string
 ): Promise<{ displayName: string }> {
-  const token = await firebase.auth().currentUser?.getIdToken()
+  const token = await getToken()
   const res = await fetch("/moderation/rename-account", {
     method: "POST",
     headers: {
@@ -437,62 +396,6 @@ export async function renameAccount(
     throw new Error(body.error ?? res.statusText)
   }
   return res.json()
-}
-
-export type TwitchBlacklistEntry = {
-  streamerLogin: string
-  reason?: string
-  createdBy: string
-  createdAt?: string
-  updatedAt?: string
-}
-
-export async function getTwitchBlacklist(): Promise<TwitchBlacklistEntry[]> {
-  const token = await firebase.auth().currentUser?.getIdToken()
-  const res = await fetch("/moderation/twitch-blacklist", {
-    headers: { Authorization: `Bearer ${token}` }
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(body.error ?? res.statusText)
-  }
-  return res.json()
-}
-
-export async function addTwitchBlacklist(
-  streamerLogin: string,
-  reason?: string
-): Promise<void> {
-  const token = await firebase.auth().currentUser?.getIdToken()
-  const res = await fetch("/moderation/twitch-blacklist", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({ streamerLogin, reason })
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(body.error ?? res.statusText)
-  }
-}
-
-export async function removeTwitchBlacklist(
-  streamerLogin: string
-): Promise<void> {
-  const token = await firebase.auth().currentUser?.getIdToken()
-  const res = await fetch(
-    `/moderation/twitch-blacklist/${encodeURIComponent(streamerLogin)}`,
-    {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` }
-    }
-  )
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(body.error ?? res.statusText)
-  }
 }
 
 export function ban(params: { uid: string; reason: string }) {

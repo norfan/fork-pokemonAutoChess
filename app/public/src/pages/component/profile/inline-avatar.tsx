@@ -14,9 +14,6 @@ export function InlineAvatar(props: {
   twitchDisplayName?: string
 }) {
   const { t } = useTranslation()
-  const twitchUrl = props.twitchLogin
-    ? `https://www.twitch.tv/${props.twitchLogin}`
-    : null
   return (
     <div
       className="inline-avatar"
@@ -45,24 +42,6 @@ export function InlineAvatar(props: {
         )}
       </span>
       {props.role && <RoleBadge role={props.role} />}
-      {twitchUrl && (
-        <a
-          className="twitch-badge-link"
-          href={twitchUrl}
-          target="_blank"
-          rel="noreferrer"
-          title={`Watch ${props.twitchDisplayName ?? props.twitchLogin} on Twitch`}
-          aria-label={`Watch ${props.twitchDisplayName ?? props.twitchLogin} on Twitch`}
-        >
-          <img
-            src="/assets/ui/twitch.png"
-            width={16}
-            height={16}
-            alt=""
-            aria-hidden="true"
-          />
-        </a>
-      )}
     </div>
   )
 }
